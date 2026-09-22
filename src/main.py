@@ -2,6 +2,8 @@ import os
 import re
 import sys
 import json
+import shutil
+import argparse
 
 import fitz
 import pytesseract
@@ -402,11 +404,44 @@ def processar_pdf(caminho_pdf):
 
 def main():
 
-    if len(sys.argv) != 2:
-        print('Uso: python src/main.py "pasta_com_os_pdfs"')
-        return
+    parser = argparse.ArgumentParser()
 
-    pasta_pdfs = sys.argv[1]
+    parser.add_argument(
+        "pasta_pdfs",
+        help="Pasta contendo os PDFs"
+    )
+
+    parser.add_argument(
+        "--diverge",
+        help="Pasta onde os PDFs divergentes serão movidos"
+    )
+
+    args = parser.parse_args()
+
+    pasta_pdfs = args.pasta_pdfs
+
+    if args.diverge:
+        pasta_divergentes = args.diverge
+    else:
+        pasta_divergentes = os.path.join(
+            pasta_pdfs,
+            "DIVERGENTES"
+        )
+
+    os.makedirs(
+        pasta_divergentes,
+        exist_ok=True
+    )
+
+    pasta_divergentes = os.path.join(
+        pasta_pdfs,
+        "DIVERGENTES"
+    )
+
+    os.makedirs(
+        pasta_divergentes,
+        exist_ok=True
+    )
 
     if not os.path.isdir(pasta_pdfs):
         print("Pasta não encontrada.")
@@ -502,6 +537,14 @@ def main():
 
             divergencias.append(
                 resultado
+            )
+
+            shutil.move(
+                caminho_pdf,
+                os.path.join(
+                    pasta_divergentes,
+                    os.path.basename(caminho_pdf)
+                )
             )
 
         elif resultado["status"] == "fora_padrao":
