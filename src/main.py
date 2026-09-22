@@ -29,29 +29,81 @@ pytesseract.pytesseract.tesseract_cmd = CAMINHO_TESSERACT
 # OCR
 # ============================================================
 
-def extrair_texto_pdf(caminho_pdf):
+def extrair_texto_pdf(caminho_pdf, nome_esperado):
 
     documento = fitz.open(caminho_pdf)
-    texto = ""
+
+    nome_esperado = normalizar_texto(nome_esperado)
 
     for pagina in documento:
 
+        # Renderiza a página
         imagem = pagina.get_pixmap(dpi=300)
 
+        # Converte para PIL
         imagem_pil = Image.frombytes(
             "RGB",
             [imagem.width, imagem.height],
             imagem.samples
         )
 
-        texto += pytesseract.image_to_string(
+        # ====================================================
+        # RECORTE: SOMENTE OS 40% SUPERIORES DA PÁGINA
+        # ====================================================
+
+        limite = int(imagem_pil.height * 0.40)
+
+        imagem_pil = imagem_pil.crop(
+            (
+                0,
+                0,
+                imagem_pil.width,
+                limite
+            )
+        )
+
+        # ====================================================
+        # OCR
+        # ====================================================
+
+        texto_pagina = pytesseract.image_to_string(
             imagem_pil,
             lang="por"
         )
 
+        texto_normalizado = normalizar_texto(
+            texto_pagina
+        )
+
+        # ====================================================
+        # VERIFICA NOME
+        # ====================================================
+
+        nome_encontrado = (
+            nome_esperado in texto_normalizado
+        )
+
+        # ====================================================
+        # VERIFICA SETOR
+        # ====================================================
+
+        setor_encontrado = extrair_setor_do_pdf(
+            texto_pagina
+        )
+
+        # ====================================================
+        # ENCONTROU OS DOIS → PRÓXIMO PDF
+        # ====================================================
+
+        if nome_encontrado and setor_encontrado:
+
+            documento.close()
+
+            return texto_pagina
+
     documento.close()
 
-    return texto
+    return ""
 
 
 # ============================================================
@@ -61,11 +113,13 @@ def extrair_texto_pdf(caminho_pdf):
 def extrair_informacoes_nome_arquivo(nome_arquivo):
 
     padrao = (
-        r"^PA - "
-        r"(.+?) - "
-        r"(.+?) - "
-        r"(\d{2}\.\d{2}\.\d{4}) A "
-        r"(\d{2}\.\d{2}\.\d{4})"
+        r"^(PA|CAT)\s*-\s*"
+        r"(.+?)\s*-\s*"
+        r"(?:(.+?)\s*-\s*)?"
+        r"(\d{1,2}[.-]\d{1,2}[.-]\d{2,4})"
+        r"\s+[Aa]\s+"
+        r"(\d{1,2}[.-]\d{1,2}[.-]\d{2,4})"
+        r"(?:\s*-.*)?"
         r"\.pdf$"
     )
 
@@ -78,11 +132,16 @@ def extrair_informacoes_nome_arquivo(nome_arquivo):
     if not resultado:
         return None
 
+    tipo = resultado.group(1)
+    nome = resultado.group(2)
+    setor = resultado.group(3)
+
     return {
-        "nome": resultado.group(1).strip(),
-        "setor": resultado.group(2).strip(),
-        "data_inicio": resultado.group(3),
-        "data_fim": resultado.group(4)
+        "tipo": tipo.upper(),
+        "nome": nome.strip(),
+        "setor": setor.strip() if setor else None,
+        "data_inicio": resultado.group(4),
+        "data_fim": resultado.group(5)
     }
 
 
@@ -174,7 +233,10 @@ def processar_pdf(caminho_pdf):
             "arquivo": nome_arquivo
         }
 
-    texto_pdf = extrair_texto_pdf(caminho_pdf)
+    texto_pdf = extrair_texto_pdf(
+        caminho_pdf,
+        informacoes["nome"]
+    )
 
     nome_encontrado = encontrar_nome_no_texto(
         informacoes["nome"],
@@ -187,11 +249,17 @@ def processar_pdf(caminho_pdf):
 
     nome_correto = nome_encontrado is not None
 
-    setor_correto = (
-        setor_encontrado is not None
-        and normalizar_texto(informacoes["setor"])
-        == normalizar_texto(setor_encontrado)
-    )
+    if informacoes["setor"]:
+
+        setor_correto = (
+            setor_encontrado is not None
+            and normalizar_texto(informacoes["setor"])
+            == normalizar_texto(setor_encontrado)
+        )
+
+    else:
+
+        setor_correto = True
 
     if nome_correto and setor_correto:
         return {
@@ -224,11 +292,20 @@ def main():
         print("Pasta não encontrada.")
         return
 
-    pdfs = [
-        arquivo
-        for arquivo in os.listdir(pasta_pdfs)
-        if arquivo.lower().endswith(".pdf")
-    ]
+    pdfs = []
+
+    for raiz, pastas, arquivos in os.walk(pasta_pdfs):
+
+        for arquivo in arquivos:
+
+            if arquivo.lower().endswith(".pdf"):
+
+                caminho_pdf = os.path.join(
+                    raiz,
+                    arquivo
+                )
+
+                pdfs.append(caminho_pdf)
 
     if not pdfs:
         print("Nenhum PDF encontrado.")
@@ -243,16 +320,11 @@ def main():
     divergencias = []
     fora_padrao = []
 
-    for arquivo in tqdm(
+    for caminho_pdf in tqdm(
         pdfs,
         desc="Processando",
         unit="pdf"
     ):
-
-        caminho_pdf = os.path.join(
-            pasta_pdfs,
-            arquivo
-        )
 
         resultado = processar_pdf(caminho_pdf)
 
