@@ -118,15 +118,42 @@ def normalizar_texto(texto):
 
 
 # ============================================================
-# LOCALIZAÇÃO DO NOME NO PDF
+# LOCALIZAÇÃO DO NOME
 # ============================================================
 
-def nome_encontrado_no_pdf(nome, texto_pdf):
+def encontrar_nome_no_texto(nome_esperado, texto_pdf):
 
-    nome = normalizar_texto(nome)
-    texto_pdf = normalizar_texto(texto_pdf)
+    texto = normalizar_texto(texto_pdf)
+    nome = normalizar_texto(nome_esperado)
 
-    return nome in texto_pdf
+    if nome in texto:
+        return nome
+
+    return None
+
+
+# ============================================================
+# LOCALIZAÇÃO DO SETOR
+# ============================================================
+
+def extrair_setor_do_pdf(texto_pdf):
+
+    texto = normalizar_texto(texto_pdf)
+
+    padrao = (
+        r"SECRETARIA\s+DE\s+LOTACAO\s*:\s*"
+        r"([A-Z]+)"
+    )
+
+    resultado = re.search(
+        padrao,
+        texto
+    )
+
+    if resultado:
+        return resultado.group(1).strip()
+
+    return None
 
 
 # ============================================================
@@ -149,10 +176,24 @@ def processar_pdf(caminho_pdf):
 
     texto_pdf = extrair_texto_pdf(caminho_pdf)
 
-    if nome_encontrado_no_pdf(
+    nome_encontrado = encontrar_nome_no_texto(
         informacoes["nome"],
         texto_pdf
-    ):
+    )
+
+    setor_encontrado = extrair_setor_do_pdf(
+        texto_pdf
+    )
+
+    nome_correto = nome_encontrado is not None
+
+    setor_correto = (
+        setor_encontrado is not None
+        and normalizar_texto(informacoes["setor"])
+        == normalizar_texto(setor_encontrado)
+    )
+
+    if nome_correto and setor_correto:
         return {
             "status": "correto"
         }
@@ -160,7 +201,10 @@ def processar_pdf(caminho_pdf):
     return {
         "status": "divergente",
         "arquivo": nome_arquivo,
-        "nome_esperado": informacoes["nome"]
+        "nome_esperado": informacoes["nome"],
+        "nome_encontrado": nome_encontrado,
+        "setor_esperado": informacoes["setor"],
+        "setor_encontrado": setor_encontrado
     }
 
 
@@ -218,28 +262,50 @@ def main():
             divergencias.append(resultado)
 
         elif resultado["status"] == "fora_padrao":
-            fora_padrao.append(resultado["arquivo"])
+            fora_padrao.append(
+                resultado["arquivo"]
+            )
+
+    # ========================================================
+    # RESULTADO
+    # ========================================================
 
     print(
         f"\n✓ {resultados['correto']} corretos"
     )
 
     if divergencias:
+
         print(
             f"✗ {resultados['divergente']} divergente(s):"
         )
 
         for divergencia in divergencias:
+
             print(
-                f"\n  Arquivo: {divergencia['arquivo']}"
+                f"\n  Arquivo: "
+                f"{divergencia['arquivo']}"
             )
+
             print(
-                f"  Nome esperado: {divergencia['nome_esperado']}"
+                f"  Nome: "
+                f"{divergencia['nome_esperado']} "
+                f"→ "
+                f"{divergencia['nome_encontrado'] or 'não encontrado'}"
+            )
+
+            print(
+                f"  Setor: "
+                f"{divergencia['setor_esperado']} "
+                f"→ "
+                f"{divergencia['setor_encontrado'] or 'não encontrado'}"
             )
 
     if fora_padrao:
+
         print(
-            f"\n⚠ {resultados['fora_padrao']} fora do padrão:"
+            f"\n⚠ {resultados['fora_padrao']} "
+            f"fora do padrão:"
         )
 
         for arquivo in fora_padrao:
