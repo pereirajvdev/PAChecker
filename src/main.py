@@ -108,25 +108,19 @@ def extrair_texto_pdf(caminho_pdf, nome_esperado):
 
     documento = fitz.open(caminho_pdf)
 
-    nome_esperado = normalizar_texto(nome_esperado)
-
     for pagina in documento:
 
-        # Renderiza a página
         imagem = pagina.get_pixmap(dpi=300)
 
-        # Converte para PIL
         imagem_pil = Image.frombytes(
             "RGB",
             [imagem.width, imagem.height],
             imagem.samples
         )
 
-        # ====================================================
-        # RECORTE: SOMENTE OS 40% SUPERIORES DA PÁGINA
-        # ====================================================
-
-        limite = int(imagem_pil.height * 0.50)
+        limite = int(
+            imagem_pil.height * 0.40
+        )
 
         imagem_pil = imagem_pil.crop(
             (
@@ -137,40 +131,18 @@ def extrair_texto_pdf(caminho_pdf, nome_esperado):
             )
         )
 
-        # ====================================================
-        # OCR
-        # ====================================================
-
         texto_pagina = pytesseract.image_to_string(
             imagem_pil,
             lang="por"
         )
 
-        texto_normalizado = normalizar_texto(
+        nome_encontrado = extrair_nome_do_pdf(
             texto_pagina
         )
 
-        # ====================================================
-        # VERIFICA NOME
-        # ====================================================
-
-        nome_encontrado = (
-            nome_esperado in texto_normalizado
-        )
-
-        # ====================================================
-        # VERIFICA SETOR
-        # ====================================================
-
-        setor_encontrado = extrair_setor_do_pdf(
-            texto_pagina
-        )
-
-        # ====================================================
-        # ENCONTROU OS DOIS → PRÓXIMO PDF
-        # ====================================================
-
-        if nome_encontrado and setor_encontrado:
+        # Se encontrou o campo NOME, já podemos
+        # retornar o texto para comparação.
+        if nome_encontrado:
 
             documento.close()
 
@@ -207,14 +179,14 @@ def extrair_informacoes_nome_arquivo(nome_arquivo):
     if not resultado:
         return None
 
-    tipo = resultado.group(1)
-    nome = resultado.group(2)
-    setor = resultado.group(3)
-
     return {
-        "tipo": tipo.upper(),
-        "nome": nome.strip(),
-        "setor": setor.strip() if setor else None,
+        "tipo": resultado.group(1).upper(),
+        "nome": resultado.group(2).strip(),
+        "setor": (
+            resultado.group(3).strip()
+            if resultado.group(3)
+            else None
+        ),
         "data_inicio": resultado.group(4),
         "data_fim": resultado.group(5)
     }
@@ -265,6 +237,25 @@ def encontrar_nome_no_texto(nome_esperado, texto_pdf):
 
     return None
 
+def extrair_nome_do_pdf(texto_pdf):
+
+    texto = normalizar_texto(texto_pdf)
+
+    padrao = (
+        r"NOME\s*:\s*"
+        r"(.+?)"
+        r"\s+END\."
+    )
+
+    resultado = re.search(
+        padrao,
+        texto
+    )
+
+    if resultado:
+        return resultado.group(1).strip()
+
+    return None
 
 # ============================================================
 # LOCALIZAÇÃO DO SETOR
@@ -339,8 +330,11 @@ def processar_pdf(caminho_pdf):
         informacoes["nome"]
     )
 
-    nome_encontrado = encontrar_nome_no_texto(
-        informacoes["nome"],
+    # ========================================================
+    # EXTRAI AS INFORMAÇÕES EFETIVAMENTE ENCONTRADAS NO PDF
+    # ========================================================
+
+    nome_encontrado = extrair_nome_do_pdf(
         texto_pdf
     )
 
@@ -348,21 +342,46 @@ def processar_pdf(caminho_pdf):
         texto_pdf
     )
 
-    nome_correto = nome_encontrado is not None
+    # ========================================================
+    # COMPARAÇÃO DO NOME
+    # ========================================================
+
+    nome_correto = (
+        nome_encontrado is not None
+        and normalizar_texto(
+            informacoes["nome"]
+        )
+        == normalizar_texto(
+            nome_encontrado
+        )
+    )
+
+    # ========================================================
+    # COMPARAÇÃO DO SETOR
+    # ========================================================
 
     if informacoes["setor"]:
 
         setor_correto = (
             setor_encontrado is not None
-            and normalizar_texto(informacoes["setor"])
-            == normalizar_texto(setor_encontrado)
+            and normalizar_texto(
+                informacoes["setor"]
+            )
+            == normalizar_texto(
+                setor_encontrado
+            )
         )
 
     else:
 
         setor_correto = True
 
+    # ========================================================
+    # RESULTADO
+    # ========================================================
+
     if nome_correto and setor_correto:
+
         return {
             "status": "correto"
         }

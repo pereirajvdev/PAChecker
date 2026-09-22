@@ -1517,5 +1517,40 @@
         "resultado": {
             "status": "correto"
         }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\PA - ADRIANA DA SILVA FERREIRA - SEGOV - 21.08.2026 A 19.09.2026.pdf": {
+        "tamanho": 1667863,
+        "modificado": 1788349867.1184542,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\PA - ALZIRA ARAUJO DE OLIVEIRA - SEGOV - 02.09.2026 A 04.09.2026.pdf": {
+        "tamanho": 1672862,
+        "modificado": 1788964554.9021323,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\PA - ALZIRA ARAUJO DE OLIVEIRA - SEGOV - 24.08.2026 A 01.09.2026.pdf": {
+        "tamanho": 1236577,
+        "modificado": 1788349599.3841953,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\PA - JOÃO BATISTA HONORIO - SESP - 10.08.2026 A 10.08.2026 - AO INSS.pdf": {
+        "tamanho": 1652055,
+        "modificado": 1788440398.8163354,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\PA - MARCOS ANTONIO DOS SANTOS - SEDEC - 18.08.2026 A 19.08.2026.pdf": {
+        "tamanho": 1853134,
+        "modificado": 1787923336.833806,
+        "resultado": {
+            "status": "correto"
+        }
     }
 }
