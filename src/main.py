@@ -537,19 +537,41 @@ def main():
                 f"{divergencia['arquivo']}"
             )
 
-            print(
-                f"  Nome: "
-                f"{divergencia['nome_esperado']} "
-                f"→ "
-                f"{divergencia['nome_encontrado'] or 'não encontrado'}"
-            )
+            if (
+                divergencia["nome_encontrado"] is None
+                or
+                normalizar_texto(
+                    divergencia["nome_esperado"]
+                )
+                != normalizar_texto(
+                    divergencia["nome_encontrado"]
+                )
+            ):
+                print(
+                    f"  Nome: "
+                    f"{divergencia['nome_esperado']} "
+                    f"→ "
+                    f"{divergencia['nome_encontrado'] or 'não encontrado'}"
+                )
 
-            print(
-                f"  Setor: "
-                f"{divergencia['setor_esperado']} "
-                f"→ "
-                f"{divergencia['setor_encontrado'] or 'não encontrado'}"
-            )
+            if divergencia["setor_esperado"]:
+
+                if (
+                    divergencia["setor_encontrado"] is None
+                    or
+                    normalizar_texto(
+                        divergencia["setor_esperado"]
+                    )
+                    != normalizar_texto(
+                        divergencia["setor_encontrado"]
+                    )
+                ):
+                    print(
+                        f"  Setor: "
+                        f"{divergencia['setor_esperado']} "
+                        f"→ "
+                        f"{divergencia['setor_encontrado'] or 'não encontrado'}"
+                    )
 
     if fora_padrao:
 
