@@ -1,12 +1,33 @@
 import os
 import re
 import sys
+import json
 
 import fitz
 import pytesseract
 from PIL import Image
 from tqdm import tqdm
 
+SETORES = {
+    "SEMS",
+    "SEDUC",
+    "SEMOSP",
+    "SEFIN",
+    "SARH",
+    "SECOM",
+    "SEDEC",
+    "SEMAP",
+    "SEMOB",
+    "SESP",
+    "SEMCI",
+    "SEDESO",
+    "SEGOV",
+    "PGM",
+    "SEMMADA",
+    "SEPLAN",
+    "SESMT",
+    "SELTC",
+}
 
 # ============================================================
 # CONFIGURAÇÕES
@@ -24,6 +45,60 @@ CAMINHO_TESSERACT = os.path.join(
 
 pytesseract.pytesseract.tesseract_cmd = CAMINHO_TESSERACT
 
+ARQUIVO_CACHE = os.path.join(
+    PASTA_PROJETO,
+    "cache.json"
+)
+
+# ============================================================
+# CACHE
+# ============================================================
+
+def carregar_cache():
+
+    if not os.path.exists(ARQUIVO_CACHE):
+        return {}
+
+    try:
+
+        with open(
+            ARQUIVO_CACHE,
+            "r",
+            encoding="utf-8"
+        ) as arquivo:
+
+            return json.load(arquivo)
+
+    except (json.JSONDecodeError, OSError):
+
+        return {}
+
+
+def salvar_cache(cache):
+
+    with open(
+        ARQUIVO_CACHE,
+        "w",
+        encoding="utf-8"
+    ) as arquivo:
+
+        json.dump(
+            cache,
+            arquivo,
+            ensure_ascii=False,
+            indent=4
+        )
+
+
+def arquivo_foi_alterado(caminho_pdf, dados_cache):
+
+    informacoes = os.stat(caminho_pdf)
+
+    return (
+        dados_cache.get("tamanho") != informacoes.st_size
+        or
+        dados_cache.get("modificado") != informacoes.st_mtime
+    )
 
 # ============================================================
 # OCR
@@ -51,7 +126,7 @@ def extrair_texto_pdf(caminho_pdf, nome_esperado):
         # RECORTE: SOMENTE OS 40% SUPERIORES DA PÁGINA
         # ====================================================
 
-        limite = int(imagem_pil.height * 0.40)
+        limite = int(imagem_pil.height * 0.50)
 
         imagem_pil = imagem_pil.crop(
             (
@@ -119,7 +194,7 @@ def extrair_informacoes_nome_arquivo(nome_arquivo):
         r"(\d{1,2}[.-]\d{1,2}[.-]\d{2,4})"
         r"\s+[Aa]\s+"
         r"(\d{1,2}[.-]\d{1,2}[.-]\d{2,4})"
-        r"(?:\s*-.*)?"
+        r"(?:\s*-\s*.*)?"
         r"\.pdf$"
     )
 
@@ -200,8 +275,7 @@ def extrair_setor_do_pdf(texto_pdf):
     texto = normalizar_texto(texto_pdf)
 
     padrao = (
-        r"SECRETARIA\s+DE\s+LOTACAO\s*:\s*"
-        r"([A-Z]+)"
+        r"SECRETARIA\s+DE\s+LOTACAO\s*:\s*(.*)"
     )
 
     resultado = re.search(
@@ -209,8 +283,35 @@ def extrair_setor_do_pdf(texto_pdf):
         texto
     )
 
-    if resultado:
-        return resultado.group(1).strip()
+    if not resultado:
+        return None
+
+    informacao = resultado.group(1)
+
+    # ========================================================
+    # PROCURA UMA SIGLA OFICIAL
+    # ========================================================
+
+    for setor in SETORES:
+
+        if re.search(
+            rf"\b{re.escape(setor)}\b",
+            informacao
+        ):
+            return setor
+
+    # ========================================================
+    # NOMES COMPLETOS DAS SECRETARIAS
+    # ========================================================
+
+    conversoes = {
+        "SECRETARIA DE GOVERNO": "SEGOV",
+    }
+
+    for nome_secretaria, sigla in conversoes.items():
+
+        if nome_secretaria in informacao:
+            return sigla
 
     return None
 
@@ -311,6 +412,8 @@ def main():
         print("Nenhum PDF encontrado.")
         return
 
+    cache = carregar_cache()
+
     resultados = {
         "correto": 0,
         "divergente": 0,
@@ -326,17 +429,73 @@ def main():
         unit="pdf"
     ):
 
-        resultado = processar_pdf(caminho_pdf)
+        informacoes_arquivo = os.stat(
+            caminho_pdf
+        )
 
-        resultados[resultado["status"]] += 1
+        chave = os.path.abspath(
+            caminho_pdf
+        )
+
+        dados_cache = cache.get(chave)
+
+        # ========================================================
+        # VERIFICA SE JÁ EXISTE NO CACHE E NÃO FOI ALTERADO
+        # ========================================================
+
+        if (
+            dados_cache is not None
+            and not arquivo_foi_alterado(
+                caminho_pdf,
+                dados_cache
+            )
+        ):
+
+            resultado = dados_cache["resultado"]
+
+        # ========================================================
+        # PDF NOVO OU ALTERADO → PROCESSA NORMALMENTE
+        # ========================================================
+
+        else:
+
+            resultado = processar_pdf(
+                caminho_pdf
+            )
+
+            # ========================================================
+            # SALVA NO CACHE SOMENTE SE ESTIVER TUDO CORRETO
+            # ========================================================
+
+            if resultado["status"] == "correto":
+
+                cache[chave] = {
+                    "tamanho": informacoes_arquivo.st_size,
+                    "modificado": informacoes_arquivo.st_mtime,
+                    "resultado": resultado
+                }
+
+        resultados[
+            resultado["status"]
+        ] += 1
 
         if resultado["status"] == "divergente":
-            divergencias.append(resultado)
+
+            divergencias.append(
+                resultado
+            )
 
         elif resultado["status"] == "fora_padrao":
+
             fora_padrao.append(
                 resultado["arquivo"]
             )
+
+    # ========================================================
+    # SALVA O CACHE
+    # ========================================================
+
+    salvar_cache(cache)
 
     # ========================================================
     # RESULTADO
