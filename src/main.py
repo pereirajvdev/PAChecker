@@ -52,6 +52,9 @@ ARQUIVO_CACHE = os.path.join(
     "cache.json"
 )
 
+# Desabilita erros do mupdf
+fitz.TOOLS.mupdf_display_errors(False)
+
 # ============================================================
 # CACHE
 # ============================================================
