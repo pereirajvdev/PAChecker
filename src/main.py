@@ -112,7 +112,7 @@ def extrair_texto_pdf(caminho_pdf, nome_esperado):
 
     for pagina in documento:
 
-        imagem = pagina.get_pixmap(dpi=300)
+        imagem = pagina.get_pixmap(dpi=200)
 
         imagem_pil = Image.frombytes(
             "RGB",
@@ -121,7 +121,7 @@ def extrair_texto_pdf(caminho_pdf, nome_esperado):
         )
 
         limite = int(
-            imagem_pil.height * 0.40
+            imagem_pil.height * 0.35
         )
 
         imagem_pil = imagem_pil.crop(
@@ -139,7 +139,8 @@ def extrair_texto_pdf(caminho_pdf, nome_esperado):
         )
 
         nome_encontrado = extrair_nome_do_pdf(
-            texto_pagina
+            texto_pagina,
+            nome_esperado
         )
 
         # Se encontrou o campo NOME, já podemos
@@ -239,7 +240,7 @@ def encontrar_nome_no_texto(nome_esperado, texto_pdf):
 
     return None
 
-def extrair_nome_do_pdf(texto_pdf):
+def extrair_nome_do_pdf(texto_pdf, nome_esperado):
 
     texto = normalizar_texto(texto_pdf)
 
@@ -255,7 +256,16 @@ def extrair_nome_do_pdf(texto_pdf):
     )
 
     if resultado:
-        return resultado.group(1).strip()
+
+        nome = resultado.group(1).strip()
+
+        tamanho_esperado = len(
+            normalizar_texto(nome_esperado)
+        )
+
+        nome = nome[:tamanho_esperado]
+
+        return nome.strip()
 
     return None
 
@@ -337,7 +347,8 @@ def processar_pdf(caminho_pdf):
     # ========================================================
 
     nome_encontrado = extrair_nome_do_pdf(
-        texto_pdf
+        texto_pdf,
+        informacoes["nome"]
     )
 
     setor_encontrado = extrair_setor_do_pdf(
@@ -427,16 +438,6 @@ def main():
             pasta_pdfs,
             "DIVERGENTES"
         )
-
-    os.makedirs(
-        pasta_divergentes,
-        exist_ok=True
-    )
-
-    pasta_divergentes = os.path.join(
-        pasta_pdfs,
-        "DIVERGENTES"
-    )
 
     os.makedirs(
         pasta_divergentes,
