@@ -52,7 +52,7 @@ ARQUIVO_CACHE = os.path.join(
     "cache.json"
 )
 
-# Desabilita erros do mupdf
+# Desabilita feedback de erros do mupdf no terminal
 fitz.TOOLS.mupdf_display_errors(False)
 
 # ============================================================
@@ -430,6 +430,11 @@ def main():
         help="Pasta onde os PDFs divergentes serão movidos"
     )
 
+    parser.add_argument(
+        "--notstd",
+        help="Pasta onde os PDFs fora do padrão serão movidos"
+    )
+
     args = parser.parse_args()
 
     pasta_pdfs = args.pasta_pdfs
@@ -439,11 +444,24 @@ def main():
     else:
         pasta_divergentes = os.path.join(
             pasta_pdfs,
-            "DIVERGENTES"
+            "DIVERGENT"
+        )
+
+    if args.notstd:
+        pasta_not_standard = args.notstd
+    else:
+        pasta_not_standard = os.path.join(
+            pasta_pdfs,
+            "NOT_STANDARD"
         )
 
     os.makedirs(
         pasta_divergentes,
+        exist_ok=True
+    )
+
+    os.makedirs(
+        pasta_not_standard,
         exist_ok=True
     )
 
@@ -552,9 +570,16 @@ def main():
             )
 
         elif resultado["status"] == "fora_padrao":
-
             fora_padrao.append(
                 resultado["arquivo"]
+            )
+
+            shutil.move(
+                caminho_pdf,
+                os.path.join(
+                    pasta_not_standard,
+                    os.path.basename(caminho_pdf)
+                )
             )
 
     # ========================================================
