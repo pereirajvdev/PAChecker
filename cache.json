@@ -1433,5 +1433,75 @@
         "resultado": {
             "status": "correto"
         }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\CAT - CASSIA DIAS RETORI - SEDUC - 01.09.2026 A 04.09.2026.pdf": {
+        "tamanho": 10779294,
+        "modificado": 1789396666.649978,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\CAT - VALDECI DO ESPÍRITO SANTO - SEMOSP - 10.08.2026 A 11.08.2026.pdf": {
+        "tamanho": 5438544,
+        "modificado": 1787586805.7898753,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ADNEIA MATIAS DE SOUSA LIMA - SEDUC - 17.08.2026 A 19.08.2026 - CONTRATO.pdf": {
+        "tamanho": 4021793,
+        "modificado": 1787596983.5543058,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ADNEIA MATIAS DE SOUSA LIMA - SEDUC - 17.08.2026 A 19.08.2026.pdf": {
+        "tamanho": 3994328,
+        "modificado": 1787596912.3312724,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ADRIANA DA SILVA FERREIRA - SEGOV - 21.08.2026 A 19.09.2026.pdf": {
+        "tamanho": 1667863,
+        "modificado": 1788349867.1184542,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ADRIANA PONTES DA SILVA - SEDUC - 01.09.2026 A 25.09.2026.pdf": {
+        "tamanho": 2944687,
+        "modificado": 1788525565.670591,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ADRIANE ELISABETE OLYMPIO - SEMS - 19.08.2026 A 21.08.2026.pdf": {
+        "tamanho": 4060193,
+        "modificado": 1787839167.588192,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ALBA VALERIA MENDES DA SILVA - SEMS - 31.08.2026 A 14.09.2026.pdf": {
+        "tamanho": 1918194,
+        "modificado": 1788868002.355995,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ALESSANDRA MARIA DE OLIVEIRA ROSA - SEDUC - 26.08.2026 A 09.09.2026.pdf": {
+        "tamanho": 4084004,
+        "modificado": 1788177415.8551574,
+        "resultado": {
+            "status": "correto"
+        }
+    },
+    "C:\\Users\\Joao Castro\\Documents\\PAFilePattern\\tests\\06\\input\\essa nao\\PA - ALINE CARVALHO TRISTÃO - SEMS - 25.08.2026 A 28.08.2026.pdf": {
+        "tamanho": 2104113,
+        "modificado": 1788178855.0640798,
+        "resultado": {
+            "status": "correto"
+        }
     }
 }

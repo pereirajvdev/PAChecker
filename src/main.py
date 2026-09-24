@@ -435,7 +435,19 @@ def main():
         help="Pasta onde os PDFs fora do padrão serão movidos"
     )
 
+    parser.add_argument(
+        "--notthis",
+        help="Pasta que será ignorada durante o processamento"
+    )
+    
     args = parser.parse_args()
+
+    pasta_ignorada = None
+
+    if args.notthis:
+        pasta_ignorada = os.path.normcase(
+            os.path.abspath(args.notthis)
+        )
 
     pasta_pdfs = args.pasta_pdfs
 
@@ -473,15 +485,23 @@ def main():
 
     for raiz, pastas, arquivos in os.walk(pasta_pdfs):
 
+        if pasta_ignorada:
+            pastas[:] = [
+                pasta
+                for pasta in pastas
+                if os.path.normcase(
+                    os.path.abspath(
+                        os.path.join(raiz, pasta)
+                    )
+                ) != pasta_ignorada
+            ]
+
         for arquivo in arquivos:
-
             if arquivo.lower().endswith(".pdf"):
-
                 caminho_pdf = os.path.join(
                     raiz,
                     arquivo
                 )
-
                 pdfs.append(caminho_pdf)
 
     if not pdfs:
