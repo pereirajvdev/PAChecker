@@ -412,9 +412,111 @@ def processar_pdf(caminho_pdf):
     }
 
 
+
+# ============================================================
+# VERIFICAÇÃO DE DUPLICADOS
+# ============================================================
+
+def extrair_primeiro_nome(caminho_pdf):
+    """
+    Extrai o primeiro nome a partir do nome padronizado do PDF.
+    Ignora diferenças entre maiúsculas e minúsculas.
+    """
+    nome_arquivo = os.path.basename(caminho_pdf)
+
+    informacoes = extrair_informacoes_nome_arquivo(nome_arquivo)
+
+    if informacoes is None:
+        return None
+
+    nome_completo = informacoes["nome"].strip()
+
+    if not nome_completo:
+        return None
+
+    return nome_completo.split()[0].casefold()
+
+
+def destino_unico(pasta_destino, nome_arquivo):
+    """
+    Evita sobrescrever arquivos já existentes no destino.
+    """
+    caminho = os.path.join(pasta_destino, nome_arquivo)
+
+    if not os.path.exists(caminho):
+        return caminho
+
+    nome, extensao = os.path.splitext(nome_arquivo)
+    contador = 1
+
+    while True:
+        novo_nome = f"{nome}_{contador}{extensao}"
+        caminho = os.path.join(pasta_destino, novo_nome)
+
+        if not os.path.exists(caminho):
+            return caminho
+
+        contador += 1
+
+
+def verificar_duplicados(pdfs, pasta_duplicate):
+    """
+    Considera duplicados os PDFs com o mesmo primeiro nome
+    e o mesmo tamanho em bytes.
+
+    Mantém o primeiro arquivo encontrado e move os seguintes
+    que coincidirem nos dois critérios.
+    """
+    os.makedirs(pasta_duplicate, exist_ok=True)
+
+    arquivos_vistos = {}
+    duplicados = []
+    manter = []
+
+    for caminho_pdf in pdfs:
+        try:
+            primeiro_nome = extrair_primeiro_nome(caminho_pdf)
+
+            # Arquivos sem nome padronizado não entram na comparação.
+            if primeiro_nome is None:
+                manter.append(caminho_pdf)
+                continue
+
+            tamanho_bytes = os.path.getsize(caminho_pdf)
+
+            chave = (primeiro_nome, tamanho_bytes)
+
+            if chave not in arquivos_vistos:
+                arquivos_vistos[chave] = caminho_pdf
+                manter.append(caminho_pdf)
+                continue
+
+            caminho_destino = destino_unico(
+                pasta_duplicate,
+                os.path.basename(caminho_pdf)
+            )
+
+            shutil.move(caminho_pdf, caminho_destino)
+
+            duplicados.append({
+                "arquivo": os.path.basename(caminho_pdf),
+                "original": arquivos_vistos[chave],
+                "tamanho_bytes": tamanho_bytes,
+            })
+
+        except OSError as erro:
+            print(
+                f"\nErro ao verificar {caminho_pdf}: {erro}"
+            )
+            manter.append(caminho_pdf)
+
+    return manter, duplicados
+
+
 # ============================================================
 # MAIN
 # ============================================================
+
 
 def main():
 
@@ -439,8 +541,23 @@ def main():
         "--notthis",
         help="Pasta que será ignorada durante o processamento"
     )
-    
+
+    parser.add_argument(
+        "--duplicate",
+        nargs="?",
+        const="",
+        default=None,
+        help="Executa exclusivamente a verificação de duplicados. "
+             "Pode receber uma pasta de destino opcional."
+    )
+
     args = parser.parse_args()
+
+    pasta_pdfs = args.pasta_pdfs
+
+    if not os.path.isdir(pasta_pdfs):
+        print("Pasta não encontrada.")
+        return
 
     pasta_ignorada = None
 
@@ -449,7 +566,89 @@ def main():
             os.path.abspath(args.notthis)
         )
 
-    pasta_pdfs = args.pasta_pdfs
+    # ============================================================
+    # MODO EXCLUSIVO: DUPLICADOS
+    # ============================================================
+
+    if args.duplicate is not None:
+
+        if args.duplicate:
+            pasta_duplicate = args.duplicate
+        else:
+            pasta_duplicate = os.path.join(
+                pasta_pdfs,
+                "DUPLICATE"
+            )
+
+        pasta_duplicate_abs = os.path.normcase(
+            os.path.abspath(pasta_duplicate)
+        )
+
+        pdfs = []
+
+        for raiz, pastas, arquivos in os.walk(pasta_pdfs):
+
+            # Ignora a pasta de destino e a pasta informada
+            # em --notthis, inclusive nas buscas recursivas.
+            pastas[:] = [
+                pasta
+                for pasta in pastas
+                if os.path.normcase(
+                    os.path.abspath(
+                        os.path.join(raiz, pasta)
+                    )
+                ) != pasta_duplicate_abs
+                and (
+                    pasta_ignorada is None
+                    or os.path.normcase(
+                        os.path.abspath(
+                            os.path.join(raiz, pasta)
+                        )
+                    ) != pasta_ignorada
+                )
+            ]
+
+            for arquivo in arquivos:
+                if arquivo.lower().endswith(".pdf"):
+                    pdfs.append(
+                        os.path.join(raiz, arquivo)
+                    )
+
+        if not pdfs:
+            print("Nenhum PDF encontrado.")
+            return
+
+        pdfs, duplicados = verificar_duplicados(
+            pdfs,
+            pasta_duplicate
+        )
+
+        if duplicados:
+            print(
+                f"\n{len(duplicados)} arquivo(s) "
+                f"duplicado(s) movido(s) para:"
+            )
+            print(pasta_duplicate)
+
+            for duplicado in duplicados:
+                print(
+                    f"  {duplicado['arquivo']} "
+                    f"({duplicado['tamanho_bytes']} bytes)"
+                )
+        else:
+            print("\nNenhum arquivo duplicado encontrado.")
+
+        print(
+            f"\nVerificação concluída. "
+            f"{len(pdfs)} arquivo(s) mantido(s) "
+            f"na estrutura original."
+        )
+
+        return
+
+    # ============================================================
+    # PROCESSAMENTO NORMAL DO PACHECKER
+    # ============================================================
 
     if args.diverge:
         pasta_divergentes = args.diverge
@@ -477,32 +676,40 @@ def main():
         exist_ok=True
     )
 
-    if not os.path.isdir(pasta_pdfs):
-        print("Pasta não encontrada.")
-        return
-
     pdfs = []
 
     for raiz, pastas, arquivos in os.walk(pasta_pdfs):
 
-        if pasta_ignorada:
-            pastas[:] = [
-                pasta
-                for pasta in pastas
-                if os.path.normcase(
+        pastas[:] = [
+            pasta
+            for pasta in pastas
+            if (
+                pasta_ignorada is None
+                or os.path.normcase(
                     os.path.abspath(
                         os.path.join(raiz, pasta)
                     )
                 ) != pasta_ignorada
-            ]
+            )
+            and os.path.normcase(
+                os.path.abspath(
+                    os.path.join(raiz, pasta)
+                )
+            ) not in {
+                os.path.normcase(
+                    os.path.abspath(pasta_divergentes)
+                ),
+                os.path.normcase(
+                    os.path.abspath(pasta_not_standard)
+                ),
+            }
+        ]
 
         for arquivo in arquivos:
             if arquivo.lower().endswith(".pdf"):
-                caminho_pdf = os.path.join(
-                    raiz,
-                    arquivo
+                pdfs.append(
+                    os.path.join(raiz, arquivo)
                 )
-                pdfs.append(caminho_pdf)
 
     if not pdfs:
         print("Nenhum PDF encontrado.")
@@ -563,7 +770,7 @@ def main():
             # SALVA NO CACHE SOMENTE SE ESTIVER TUDO CORRETO
             # ========================================================
 
-            if resultado["status"] == "correto":
+            if resultado["status"] in ("correto", "divergente"):
 
                 cache[chave] = {
                     "tamanho": informacoes_arquivo.st_size,
